@@ -303,6 +303,8 @@
                                     month: 'MMM yyyy'
                                 }
                             },
+                            min: dates[0],
+                            max: dates[dates.length - 1],
                             grid: {
                                 color: '#27272a',
                                 drawBorder: false
@@ -313,7 +315,8 @@
                                     family: "'JetBrains Mono', monospace",
                                     size: 11
                                 },
-                                maxTicksLimit: 8
+                                maxTicksLimit: 6,
+                                autoSkip: true
                             }
                         },
                         y: {
@@ -463,6 +466,8 @@
                                     month: 'MMM yyyy'
                                 }
                             },
+                            min: dates[0],
+                            max: dates[dates.length - 1],
                             grid: {
                                 color: '#27272a',
                                 drawBorder: false
@@ -473,7 +478,8 @@
                                     family: "'JetBrains Mono', monospace",
                                     size: 11
                                 },
-                                maxTicksLimit: 8
+                                maxTicksLimit: 6,
+                                autoSkip: true
                             }
                         },
                         y: {
