@@ -326,6 +326,9 @@
                         y: {
                             type: 'linear',
                             position: 'left',
+                            afterFit: function(axis) {
+                                axis.width = 60;
+                            },
                             grid: {
                                 color: '#27272a',
                                 drawBorder: false
@@ -491,6 +494,9 @@
                             position: 'left',
                             min: 0,
                             max: 100,
+                            afterFit: function(axis) {
+                                axis.width = 60;
+                            },
                             grid: {
                                 color: '#27272a',
                                 drawBorder: false
