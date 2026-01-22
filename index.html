@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비트코인 변동성 지수</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0f;
+            color: #e4e4e7;
+            font-family: 'Noto Sans KR', sans-serif;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .title-section h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
+            color: #ffffff;
+        }
+
+        .title-section p {
+            font-size: 0.875rem;
+            color: #71717a;
+        }
+
+        .stats {
+            display: flex;
+            gap: 32px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            text-align: right;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #71717a;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .stat-value.price {
+            color: #e4e4e7;
+        }
+
+        .stat-value.dvol {
+            color: #22d3ee;
+        }
+
+        .chart-container {
+            background: linear-gradient(180deg, #111118 0%, #0a0a0f 100%);
+            border: 1px solid #27272a;
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        .chart-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #22d3ee33, transparent);
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 350px;
+        }
+
+        .chart-wrapper.indicator {
+            height: 175px;
+        }
+
+        .chart-label {
+            font-size: 0.75rem;
+            color: #71717a;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .last-updated {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 0.75rem;
+            color: #52525b;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 350px;
+            color: #71717a;
+        }
+
+        .error {
+            text-align: center;
+            padding: 60px 20px;
+            color: #ef4444;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 16px;
+            }
+
+            .header {
+                flex-direction: column;
+            }
+
+            .stats {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .stat-card {
+                text-align: left;
+            }
+
+            .chart-wrapper {
+                height: 280px;
+            }
+
+            .chart-wrapper.indicator {
+                height: 140px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title-section">
+                <h1>비트코인 변동성 지수</h1>
+                <p>Bitcoin Volatility Index (DVOL) · Deribit</p>
+            </div>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Bitcoin Price</div>
+                    <div class="stat-value price" id="btc-price">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">DVOL</div>
+                    <div class="stat-value dvol" id="dvol-value">--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bitcoin Price Chart -->
+        <div class="chart-container">
+            <div class="chart-label">Bitcoin Price (USD)</div>
+            <div class="chart-wrapper" id="price-wrapper">
+                <div class="loading">Loading data...</div>
+            </div>
+        </div>
+
+        <!-- DVOL Indicator -->
+        <div class="chart-container">
+            <div class="chart-label">DVOL Index</div>
+            <div class="chart-wrapper indicator" id="dvol-wrapper">
+                <div class="loading">Loading data...</div>
+            </div>
+        </div>
+
+        <div class="last-updated" id="last-updated"></div>
+    </div>
+
+    <script>
+        let btcChart = null;
+        let dvolChart = null;
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+
+        async function loadData() {
+            try {
+                const response = await fetch('data.json');
+                if (!response.ok) throw new Error('Data not found');
+                return await response.json();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                return null;
+            }
+        }
+
+        function updateStats(data) {
+            document.getElementById('btc-price').textContent = formatCurrency(data.current_price);
+            document.getElementById('dvol-value').textContent = data.current_dvol.toFixed(1) + '%';
+        }
+
+        function createBtcChart(data) {
+            const wrapper = document.getElementById('price-wrapper');
+            wrapper.innerHTML = '<canvas id="btcChart"></canvas>';
+            
+            const ctx = document.getElementById('btcChart').getContext('2d');
+            const dates = data.dates.map(d => new Date(d));
+            
+            btcChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'BTC Price',
+                        data: data.btc_prices,
+                        borderColor: '#71717a',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        pointHoverBackgroundColor: '#71717a'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: '#18181b',
+                            borderColor: '#27272a',
+                            borderWidth: 1,
+                            titleColor: '#e4e4e7',
+                            bodyColor: '#a1a1aa',
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                title: function(context) {
+                                    const date = new Date(context[0].parsed.x);
+                                    return date.toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                    });
+                                },
+                                label: function(context) {
+                                    return 'BTC: ' + formatCurrency(context.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'month',
+                                displayFormats: {
+                                    month: 'MMM yyyy'
+                                }
+                            },
+                            grid: {
+                                color: '#27272a',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#52525b',
+                                font: {
+                                    family: "'JetBrains Mono', monospace",
+                                    size: 11
+                                },
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            grid: {
+                                color: '#27272a',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#52525b',
+                                font: {
+                                    family: "'JetBrains Mono', monospace",
+                                    size: 11
+                                },
+                                callback: function(value) {
+                                    return '$' + (value / 1000).toFixed(0) + 'k';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createDvolChart(data) {
+            const wrapper = document.getElementById('dvol-wrapper');
+            wrapper.innerHTML = '<canvas id="dvolChart"></canvas>';
+            
+            const ctx = document.getElementById('dvolChart').getContext('2d');
+            const dates = data.dates.map(d => new Date(d));
+            
+            dvolChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'DVOL',
+                        data: data.dvol,
+                        borderColor: '#ffffff',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        pointHoverBackgroundColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: '#18181b',
+                            borderColor: '#27272a',
+                            borderWidth: 1,
+                            titleColor: '#e4e4e7',
+                            bodyColor: '#a1a1aa',
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                title: function(context) {
+                                    const date = new Date(context[0].parsed.x);
+                                    return date.toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                    });
+                                },
+                                label: function(context) {
+                                    return 'DVOL: ' + context.raw.toFixed(1) + '%';
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                redZone: {
+                                    type: 'box',
+                                    yMin: 60,
+                                    yMax: 100,
+                                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                                    borderWidth: 0
+                                },
+                                greenZone: {
+                                    type: 'box',
+                                    yMin: 0,
+                                    yMax: 40,
+                                    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                                    borderWidth: 0
+                                },
+                                redLine: {
+                                    type: 'line',
+                                    yMin: 60,
+                                    yMax: 60,
+                                    borderColor: 'rgba(239, 68, 68, 0.8)',
+                                    borderWidth: 1,
+                                    borderDash: [5, 5],
+                                    label: {
+                                        display: true,
+                                        content: '과변동성',
+                                        position: 'end',
+                                        backgroundColor: 'transparent',
+                                        color: 'rgba(239, 68, 68, 0.9)',
+                                        font: {
+                                            family: "'Noto Sans KR', sans-serif",
+                                            size: 11,
+                                            weight: '500'
+                                        }
+                                    }
+                                },
+                                greenLine: {
+                                    type: 'line',
+                                    yMin: 40,
+                                    yMax: 40,
+                                    borderColor: 'rgba(34, 197, 94, 0.8)',
+                                    borderWidth: 1,
+                                    borderDash: [5, 5],
+                                    label: {
+                                        display: true,
+                                        content: '저변동성',
+                                        position: 'end',
+                                        backgroundColor: 'transparent',
+                                        color: 'rgba(34, 197, 94, 0.9)',
+                                        font: {
+                                            family: "'Noto Sans KR', sans-serif",
+                                            size: 11,
+                                            weight: '500'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'month',
+                                displayFormats: {
+                                    month: 'MMM yyyy'
+                                }
+                            },
+                            grid: {
+                                color: '#27272a',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#52525b',
+                                font: {
+                                    family: "'JetBrains Mono', monospace",
+                                    size: 11
+                                },
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            position: 'right',
+                            min: 0,
+                            max: 100,
+                            grid: {
+                                color: '#27272a',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#52525b',
+                                font: {
+                                    family: "'JetBrains Mono', monospace",
+                                    size: 11
+                                },
+                                stepSize: 20
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function init() {
+            const data = await loadData();
+            
+            if (!data || !data.dates || data.dates.length === 0) {
+                document.getElementById('price-wrapper').innerHTML = 
+                    '<div class="error">데이터를 불러올 수 없습니다.</div>';
+                document.getElementById('dvol-wrapper').innerHTML = 
+                    '<div class="error">데이터를 불러올 수 없습니다.</div>';
+                return;
+            }
+
+            // Update stats
+            updateStats(data);
+
+            // Create charts
+            createBtcChart(data);
+            createDvolChart(data);
+
+            // Update last updated time
+            if (data.last_updated) {
+                document.getElementById('last-updated').textContent = 
+                    `Last updated: ${new Date(data.last_updated).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })}`;
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
