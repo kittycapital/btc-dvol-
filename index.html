@@ -91,7 +91,17 @@
             padding: 24px;
             position: relative;
             overflow: hidden;
-            margin-bottom: 16px;
+        }
+
+        .chart-container.top {
+            margin-bottom: 2px;
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+
+        .chart-container.bottom {
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
         }
 
         .chart-container::before {
@@ -123,7 +133,7 @@
 
         .last-updated {
             text-align: center;
-            margin-top: 16px;
+            margin-top: 24px;
             font-size: 0.75rem;
             color: #52525b;
         }
@@ -190,7 +200,7 @@
         </div>
 
         <!-- Bitcoin Price Chart -->
-        <div class="chart-container">
+        <div class="chart-container top">
             <div class="chart-label">Bitcoin Price (USD)</div>
             <div class="chart-wrapper" id="price-wrapper">
                 <div class="loading">Loading data...</div>
@@ -198,7 +208,7 @@
         </div>
 
         <!-- DVOL Indicator -->
-        <div class="chart-container">
+        <div class="chart-container bottom">
             <div class="chart-label">DVOL Index</div>
             <div class="chart-wrapper indicator" id="dvol-wrapper">
                 <div class="loading">Loading data...</div>
@@ -310,13 +320,7 @@
                                 drawBorder: false
                             },
                             ticks: {
-                                color: '#52525b',
-                                font: {
-                                    family: "'JetBrains Mono', monospace",
-                                    size: 11
-                                },
-                                maxTicksLimit: 6,
-                                autoSkip: true
+                                display: false
                             }
                         },
                         y: {
@@ -484,7 +488,7 @@
                         },
                         y: {
                             type: 'linear',
-                            position: 'right',
+                            position: 'left',
                             min: 0,
                             max: 100,
                             grid: {
