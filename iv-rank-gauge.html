@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비트코인 IV Rank</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0f;
+            color: #e4e4e7;
+            font-family: 'Noto Sans KR', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .dashboard {
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+
+        .gauge-container {
+            position: relative;
+            width: 300px;
+            height: 200px;
+            margin: 0 auto 16px;
+        }
+
+        .gauge-svg {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        /* Gauge arc segments */
+        .gauge-segment {
+            fill: none;
+            stroke-width: 24;
+            stroke-linecap: butt;
+        }
+
+        /* 3 zones: 저변동성, 중립, 고변동성 */
+        .segment-green {
+            stroke: #22c55e;
+        }
+
+        .segment-yellow {
+            stroke: #eab308;
+        }
+
+        .segment-red {
+            stroke: #ef4444;
+        }
+
+        /* Needle */
+        .needle {
+            fill: #22d3ee;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+            transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-origin: 150px 150px;
+        }
+
+        .needle-center {
+            fill: #18181b;
+            stroke: #22d3ee;
+            stroke-width: 2;
+        }
+
+        /* Value display */
+        .value-container {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1;
+        }
+
+        .zone-label {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 8px;
+            padding: 4px 16px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .zone-label.low {
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.15);
+        }
+
+        .zone-label.neutral {
+            color: #eab308;
+            background: rgba(234, 179, 8, 0.15);
+        }
+
+        .zone-label.high {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        /* Zone markers */
+        .zone-markers {
+            display: flex;
+            justify-content: space-between;
+            width: 300px;
+            margin: 8px auto 0;
+            padding: 0 12px;
+        }
+
+        .zone-marker {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #52525b;
+        }
+
+        /* DVOL info */
+        .dvol-info {
+            margin-top: 16px;
+            font-size: 0.8rem;
+            color: #71717a;
+        }
+
+        .dvol-info span {
+            font-family: 'JetBrains Mono', monospace;
+            color: #a1a1aa;
+        }
+
+        /* Last updated */
+        .last-updated {
+            margin-top: 16px;
+            font-size: 0.75rem;
+            color: #52525b;
+        }
+
+        /* Loading state */
+        .loading .value {
+            color: #52525b;
+        }
+
+        @media (max-width: 400px) {
+            .gauge-container {
+                width: 260px;
+                height: 170px;
+            }
+
+            .value {
+                font-size: 2.75rem;
+            }
+
+            .zone-markers {
+                width: 260px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1 class="title">비트코인 IV Rank</h1>
+        
+        <div class="gauge-container">
+            <svg class="gauge-svg" viewBox="0 0 300 180">
+                <!-- Gauge background segments (3 zones) -->
+                <!-- Green: 0-30 (저변동성) -->
+                <path class="gauge-segment segment-green" 
+                      d="M 25 150 A 125 125 0 0 1 65 55" />
+                <!-- Yellow: 30-70 (중립) -->
+                <path class="gauge-segment segment-yellow" 
+                      d="M 65 55 A 125 125 0 0 1 235 55" />
+                <!-- Red: 70-100 (고변동성) -->
+                <path class="gauge-segment segment-red" 
+                      d="M 235 55 A 125 125 0 0 1 275 150" />
+                
+                <!-- Needle (will be rotated via JS) -->
+                <g class="needle" id="needle">
+                    <polygon points="150,45 144,150 150,140 156,150" />
+                </g>
+                
+                <!-- Center circle -->
+                <circle class="needle-center" cx="150" cy="150" r="8" />
+            </svg>
+            
+            <div class="value-container">
+                <div class="value" id="index-value">--</div>
+                <div class="zone-label neutral" id="zone-label">로딩중...</div>
+            </div>
+        </div>
+        
+        <div class="zone-markers">
+            <span class="zone-marker">0</span>
+            <span class="zone-marker">30</span>
+            <span class="zone-marker">50</span>
+            <span class="zone-marker">70</span>
+            <span class="zone-marker">100</span>
+        </div>
+
+        <div class="dvol-info" id="dvol-info"></div>
+        
+        <div class="last-updated" id="last-updated"></div>
+    </div>
+
+    <script>
+        async function loadData() {
+            try {
+                const response = await fetch('data.json');
+                if (!response.ok) throw new Error('Data not found');
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error loading data:', error);
+                return null;
+            }
+        }
+
+        function calculateIVRank(dvolArray) {
+            // Use all available data (up to 365 days) for 52-week high/low
+            const high = Math.max(...dvolArray);
+            const low = Math.min(...dvolArray);
+            const current = dvolArray[dvolArray.length - 1];
+            
+            // IV Rank formula
+            const ivRank = ((current - low) / (high - low)) * 100;
+            
+            return {
+                ivRank: Math.round(ivRank),
+                current: current.toFixed(2),
+                high: high.toFixed(2),
+                low: low.toFixed(2)
+            };
+        }
+
+        function getZoneInfo(value) {
+            if (value <= 30) {
+                return { name: '저변동성', class: 'low' };
+            } else if (value <= 70) {
+                return { name: '중립', class: 'neutral' };
+            } else {
+                return { name: '고변동성', class: 'high' };
+            }
+        }
+
+        function setNeedleRotation(value) {
+            // Value 0 = -90deg (left), Value 100 = 90deg (right)
+            const rotation = (value / 100) * 180 - 90;
+            const needle = document.getElementById('needle');
+            needle.style.transform = `rotate(${rotation}deg)`;
+        }
+
+        function formatDate(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleDateString('ko-KR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        async function init() {
+            const data = await loadData();
+            
+            if (!data || !data.dvol || data.dvol.length === 0) {
+                document.getElementById('index-value').textContent = '--';
+                document.getElementById('zone-label').textContent = '데이터 없음';
+                return;
+            }
+
+            // Calculate IV Rank from DVOL data
+            const ivData = calculateIVRank(data.dvol);
+            
+            // Update display
+            document.getElementById('index-value').textContent = ivData.ivRank;
+            
+            // Update zone label
+            const zoneInfo = getZoneInfo(ivData.ivRank);
+            const zoneLabelEl = document.getElementById('zone-label');
+            zoneLabelEl.textContent = zoneInfo.name;
+            zoneLabelEl.className = `zone-label ${zoneInfo.class}`;
+            
+            // Show DVOL info
+            document.getElementById('dvol-info').innerHTML = 
+                `DVOL: <span>${ivData.current}%</span> · 52주 최저: <span>${ivData.low}%</span> · 52주 최고: <span>${ivData.high}%</span>`;
+            
+            // Animate needle
+            setTimeout(() => {
+                setNeedleRotation(ivData.ivRank);
+            }, 100);
+            
+            // Update last updated
+            if (data.last_updated) {
+                document.getElementById('last-updated').textContent = 
+                    `마지막 업데이트: ${formatDate(data.last_updated)}`;
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
