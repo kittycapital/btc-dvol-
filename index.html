@@ -156,6 +156,51 @@ var watermarkPlugin = {
 };
 Chart.register(watermarkPlugin);
 
+/* Zone Badge Plugin - draws corner badges on DVOL chart */
+var zoneBadgePlugin = {
+    id: 'zoneBadge',
+    afterDraw: function(chart) {
+        if (!chart.config.options.plugins.zoneBadge) return;
+        var ctx = chart.ctx;
+        var area = chart.chartArea;
+        if (!area) return;
+        var badges = [
+            { text: '과변동성  >60%', color: '#ef4444', bg: 'rgba(239,68,68,0.12)', y: area.top },
+            { text: '저변동성  <40%', color: '#22c55e', bg: 'rgba(34,197,94,0.12)', y: area.bottom }
+        ];
+        ctx.save();
+        ctx.font = "500 10px 'Noto Sans KR', sans-serif";
+        badges.forEach(function(b) {
+            var tw = ctx.measureText(b.text).width;
+            var px = 6, py = 3, r = 4;
+            var bw = tw + px * 2;
+            var bh = 18;
+            var bx = area.left + 8;
+            var by = b.y === area.top ? area.top + 8 : area.bottom - 8 - bh;
+            /* rounded rect */
+            ctx.beginPath();
+            ctx.moveTo(bx + r, by);
+            ctx.lineTo(bx + bw - r, by);
+            ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + r);
+            ctx.lineTo(bx + bw, by + bh - r);
+            ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - r, by + bh);
+            ctx.lineTo(bx + r, by + bh);
+            ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - r);
+            ctx.lineTo(bx, by + r);
+            ctx.quadraticCurveTo(bx, by, bx + r, by);
+            ctx.closePath();
+            ctx.fillStyle = b.bg;
+            ctx.fill();
+            /* text */
+            ctx.fillStyle = b.color;
+            ctx.textBaseline = 'middle';
+            ctx.fillText(b.text, bx + px, by + bh / 2);
+        });
+        ctx.restore();
+    }
+};
+Chart.register(zoneBadgePlugin);
+
 /* ===== Chart Logic ===== */
 var btcChart = null;
 var dvolChart = null;
@@ -324,6 +369,7 @@ function createDvolChart(data) {
             interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: { display: false },
+                zoneBadge: true,
                 tooltip: {
                     backgroundColor: '#0a0a0a',
                     borderColor: '#1a1a1a',
@@ -359,27 +405,13 @@ function createDvolChart(data) {
                         },
                         redLine: {
                             type: 'line', yMin: 60, yMax: 60,
-                            borderColor: 'rgba(239, 68, 68, 0.5)',
-                            borderWidth: 1, borderDash: [4, 4],
-                            label: {
-                                display: true, content: '과변동성', position: 'start',
-                                backgroundColor: 'transparent',
-                                color: 'rgba(239, 68, 68, 0.7)',
-                                font: { family: "'Noto Sans KR', sans-serif", size: 10, weight: '500' },
-                                padding: { left: 4, right: 0, top: 0, bottom: 0 }
-                            }
+                            borderColor: 'rgba(239, 68, 68, 0.35)',
+                            borderWidth: 1, borderDash: [4, 4]
                         },
                         greenLine: {
                             type: 'line', yMin: 40, yMax: 40,
-                            borderColor: 'rgba(34, 197, 94, 0.5)',
-                            borderWidth: 1, borderDash: [4, 4],
-                            label: {
-                                display: true, content: '저변동성', position: 'start',
-                                backgroundColor: 'transparent',
-                                color: 'rgba(34, 197, 94, 0.7)',
-                                font: { family: "'Noto Sans KR', sans-serif", size: 10, weight: '500' },
-                                padding: { left: 4, right: 0, top: 0, bottom: 0 }
-                            }
+                            borderColor: 'rgba(34, 197, 94, 0.35)',
+                            borderWidth: 1, borderDash: [4, 4]
                         }
                     }
                 }
