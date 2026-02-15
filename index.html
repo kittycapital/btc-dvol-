@@ -141,8 +141,10 @@ var watermarkPlugin = {
         var ctx = chart.ctx;
         var area = chart.chartArea;
         if (!area) return;
+        var h = area.bottom - area.top;
+        var sz = h > 200 ? 28 : 16;
         ctx.save();
-        ctx.font = "600 14px 'Plus Jakarta Sans', sans-serif";
+        ctx.font = "700 " + sz + "px 'Plus Jakarta Sans', sans-serif";
         ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
