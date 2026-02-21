@@ -124,15 +124,16 @@ body{background:#000;color:#e4e4e7;font-family:'Noto Sans KR',sans-serif;min-hei
 
 <script>
 /* ===== Share Functions ===== */
-var SHARE_URL='https://herdvibe.com/btc-dvol';
+var SHARE_URL='https://herdvibe.com/27';
 var SHARE_TITLE='비트코인 변동성 지수 대시보드';
 var SHARE_DESC='비트코인 변동성 실시간 차트 | Herdvibe';
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},3000)}
 function shareTwitter(){window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(SHARE_TITLE)+'&url='+encodeURIComponent(SHARE_URL),'_blank')}
 function shareKakao(){if(window.Kakao&&!Kakao.isInitialized())Kakao.init('a43ed7b39fac35458f4f9df925a279b5');if(window.Kakao){Kakao.Share.sendDefault({objectType:'feed',content:{title:SHARE_TITLE,description:SHARE_DESC,imageUrl:'https://herdvibe.com/og-dvol.png',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}}})}}
 function shareTelegram(){window.open('https://t.me/share/url?url='+encodeURIComponent(SHARE_URL)+'&text='+encodeURIComponent(SHARE_TITLE),'_blank')}
-function copyLink(){var b=document.getElementById('copyLinkBtn');try{if(window.parent!==window)window.parent.postMessage({type:'copy',text:SHARE_URL},'*');else navigator.clipboard.writeText(SHARE_URL);b.classList.add('copied');b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>복사됨!';showToast('링크가 복사되었습니다');setTimeout(function(){b.classList.remove('copied');b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>링크복사'},2000)}catch(e){showToast('복사 실패')}}
-function shareInstagram(b){try{if(window.parent!==window)window.parent.postMessage({type:'copy',text:SHARE_URL},'*');else navigator.clipboard.writeText(SHARE_URL);var o=b.innerHTML;b.classList.add('copied');b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>복사됨!';showToast('링크가 복사되었습니다 - 인스타그램에 붙여넣기 하세요');setTimeout(function(){b.classList.remove('copied');b.innerHTML=o},2000)}catch(e){showToast('복사 실패')}}
+function _clipCopy(t){if(window.parent!==window){window.parent.postMessage({type:'copy',text:t},'*')}if(navigator.clipboard&&navigator.clipboard.writeText&&window.isSecureContext){navigator.clipboard.writeText(t).catch(function(){_fbCopy(t)})}else{_fbCopy(t)}}function _fbCopy(t){var a=document.createElement('textarea');a.value=t;a.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0';document.body.appendChild(a);a.focus();a.select();try{document.execCommand('copy')}catch(e){}document.body.removeChild(a)}
+function copyLink(){var b=document.getElementById('copyLinkBtn');_clipCopy(SHARE_URL);b.classList.add('copied');b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>복사됨!';showToast('링크가 복사되었습니다');setTimeout(function(){b.classList.remove('copied');b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>링크복사'},2000)}
+function shareInstagram(b){_clipCopy(SHARE_URL);var o=b.innerHTML;b.classList.add('copied');b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>복사됨!';showToast('링크가 복사되었습니다 - 인스타그램에 붙여넣기 하세요');setTimeout(function(){b.classList.remove('copied');b.innerHTML=o},2000)}
 
 /* ===== Watermark Plugin ===== */
 var watermarkPlugin = {
@@ -493,6 +494,12 @@ async function init() {
 }
 
 init();
+</script>
+<script>
+function sendHeight(){var h=document.documentElement.scrollHeight;window.parent.postMessage({id:'hvBtcDvol',height:h},'*')}
+window.addEventListener('load',function(){sendHeight();setTimeout(sendHeight,500);setTimeout(sendHeight,1500)});
+window.addEventListener('resize',sendHeight);
+new MutationObserver(sendHeight).observe(document.body,{childList:true,subtree:true,attributes:true});
 </script>
 </body>
 </html>
